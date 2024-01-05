@@ -2,40 +2,31 @@
 # Ensure the tag is compatible with ARM architecture
 FROM ubuntu:22.04
 
-# Avoid prompts from apt
-ENV DEBIAN_FRONTEND=noninteractive
-
 # Update and install Git and other necessary tools
-RUN apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
     git \
     wget \
     build-essential
 
-# Install Go
-# ENV GO_VERSION 1.18
-# RUN wget https://golang.org/dl/go$GO_VERSION.linux-amd64.tar.gz && \
-#     tar -C /usr/local -xzf go$GO_VERSION.linux-amd64.tar.gz && \
-#     rm go$GO_VERSION.linux-amd64.tar.gz
-# ENV PATH $PATH:/usr/local/go/bin
+ENV GO_VERSION 1.21.5
+ENV HUGO_VERSION 0.121.1
 
-# # Install Hugo
-# RUN wget https://github.com/gohugoio/hugo/releases/download/v0.121.1/hugo_extended_0.121.1_Linux-64bit.tar.gz && \
-#     tar -xzf hugo_extended_0.121.1_Linux-64bit.tar.gz && \
-#     mv hugo /usr/local/bin/ && \
-#     rm hugo_extended_0.121.1_Linux-64bit.tar.gz
- 
+# Install Go and Hugo with correct CPU architecture.
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+		go_url="https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz"; \
+		hugo_url="https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz"; \
+	else \
+		go_url="https://go.dev/dl/go${GO_VERSION}.linux-arm64.tar.gz"; \
+		hugo_url="https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-arm64.tar.gz"; \
+	fi; \
+	wget -O go.tar.gz "$go_url" && \
+	wget -O hugo.tar.gz "$hugo_url" && \
+	tar -C /usr/local -zxf go.tar.gz && \
+	tar -C /usr/local/bin -zxf hugo.tar.gz && \
+	rm -f go.tar.gz hugo.tar.gz && \
+	mkdir -p /hugo
 
-#Install Go (the package manager should handle architecture compatibility)
-RUN wget https://go.dev/dl/go1.21.5.linux-arm64.tar.gz \
-    && tar -xvf go1.21.5.linux-arm64.tar.gz\
-    && mv go /usr/local \
-    && rm go1.21.5.linux-arm64.tar.gz
 ENV PATH="${PATH}:/usr/local/go/bin"
-
-# Install Hugo (ensure to download the ARM version)
-RUN wget https://github.com/gohugoio/hugo/releases/download/v0.121.1/hugo_extended_0.121.1_linux-arm64.deb \
-    && dpkg -i hugo_extended_0.121.1_linux-arm64.deb \
-    && rm hugo_extended_0.121.1_linux-arm64.deb
 
 # Set the working directory
 WORKDIR /hugo
